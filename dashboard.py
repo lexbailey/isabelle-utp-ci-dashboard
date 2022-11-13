@@ -2,6 +2,8 @@
 import json
 import flask
 import hmac
+import sqlite3
+import yaml
 
 app = flask.Flask(__name__, template_folder='html')
 
@@ -13,28 +15,101 @@ hmac_secret = config.get('secret').encode()
 
 internal_url_base = f'http://{host}:{port}'
 url_base = config.get('ext_url', internal_url_base)
+db_name = config.get('db', 'build_data.db')
+
+def get_db():
+    global db_name
+    db = sqlite3.connect(db_name)
+    return db
+
+def init_db():
+    db = get_db()
+    cur = db.cursor()
+    cur.execute('create table if not exists builds (id integer primary key autoincrement, reponame text, datetime text, result integer, config blob, builder_version text, isabelle_version text)')
+    cur.close()
+    cur = None
+    db.commit()
+
+init_db()
 
 print(f'Listening via {internal_url_base}')
 print(f'Accesible via {url_base}')
 
+def build_details(yaml_text):
+    yobj = yaml.safe_load(yaml_text)
+    version = 'unknown_version'
+    isa_ver = 'unknown_version'
+    for name, job in yobj.get('jobs', {}).items():
+        for step in job.get('steps', []):
+            uses = step.get('uses', '')
+            if 'isabelle-theory-build-github-action' in uses:
+                try:
+                    version = uses.split('@')[-1]
+                except:
+                    version = 'unknown_version'
+                with_ = step.get('with', {})
+                isa_ver = with_.get('isabelle-version', 'unknown_version')
+    return {
+        'build_script_ver': version,
+        'isabelle_ver': isa_ver,
+    }
+
 class DataError(Exception):
     pass
+
+def insert_data(json):
+    db = get_db()
+    cur = db.cursor()
+    extra = build_details(json.get('config', {}))
+    json.update(extra)
+    data = tuple(json[k] for k in ['reponame', 'datetime', 'result', 'config', 'build_script_ver', 'isabelle_ver'])
+    cur.execute('insert into builds (reponame, datetime, result, config, builder_version, isabelle_version) values (?,?,?,?,?,?)', data)
+    cur.close()
+    db.commit()
 
 def handle_log_submission(data):
     try:
         j = json.loads(data)
     except Exception as e:
         raise DataError("Invalid json")
-    date = j.get('date')
-    ref = j.get('ref')
+    date = j.get('datetime')
+    ref = j.get('reponame')
     result = j.get('result')
-    if date is None or ref is None or result is None:
+    config = j.get('config')
+    if date is None or ref is None or result is None or config is None:
         raise DataError("Missing fields")
+    try:
+        insert_data(j)
+    except Exception as e:
+        raise DataError("Unknown failuer: " + e)
     
+def result_text(result_id):
+    return {
+        0: 'Success',
+        1: 'Fail',
+    }.get(result_id, "Unknown")
+
+
+
+app.jinja_env.globals.update(result_text=result_text)
+
+def fetch_current_data():
+    db = get_db()
+    cur = db.cursor()
+    cur.execute('select * from builds where (reponame, datetime) in (select reponame, max(datetime) over (partition by reponame) as datetime from builds) order by reponame;')
+    cols = [n[0] for n in cur.description]
+    rows = cur.fetchall()
+    return [{name:key for name,key in zip(cols, row)} for row in rows]
 
 @app.route('/')
 def root():
-   return flask.render_template('index.html')
+    data = fetch_current_data()
+    return flask.render_template('index.html', data=data)
+
+@app.route('/raw_recent_data')
+def recent_raw():
+    data = fetch_current_data()
+    return json.dumps(data)
 
 @app.route('/submit_job_log', methods=['POST'])
 def log():

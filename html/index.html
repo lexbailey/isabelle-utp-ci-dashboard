@@ -1,9 +1,41 @@
 <!DOCTYPE html>
 <html>
     <head>
+        <style>
+            table{border-spacing:0;}
+            td{padding-right:0.6em;padding-left:0.6em;}
+            td{border-left:1px solid black;}
+            td:first-child{border-left:none;}
+            tr:nth-child(odd){ background-color:#c6baff; }
+            tr:nth-child(even){ background-color:#8585ff; }
+            tr:nth-child(even):hover, tr:nth-child(odd):hover{ background-color:#e2dbff; }
+            tr:first-child, tr:first-child:hover{ background-color:#3e17ac; color:white; }
+            td[data-result="1"] { background-color: #ff6e6e; }
+            td[data-result="0"] { background-color: #b5ffa0; }
+        </style>
     </head>
     <body>
         <h1>Isabelle/UTP CI build dashboard</h1>
-        <p>todo</p>
+        <div>
+            <table>
+                <tr>
+                    <td>Repo</td>
+                    <td>Last Build Time</td>
+                    <td>Build Status</td>
+                    <td>Builder version</td>
+                    <td>Isabelle version</td>
+                </tr>
+            {% for i in data %}
+                <tr>
+                    <td>{{ i['reponame'] }}</td>
+                    <td>{{ i['datetime'] }}</td>
+                    <td data-result='{{ i['result'] }}'>{{ result_text(i['result']) }}</td>
+                    <td>{{ i['builder_version'] }}</td>
+                    <td>{{ i['isabelle_version'] }}</td>
+                </tr>
+            {% endfor %}
+            </table>
+        </div>
+        <div><p>Get all this data along with full github actions config file for each build from <a href='raw_recent_data'>/raw_recent_data</a></p></div>
     </body>
 </html>

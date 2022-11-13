@@ -1,0 +1,18 @@
+#!/usr/bin/env xonsh
+import sys
+import json
+from datetime import datetime
+if len(sys.argv) != 3:
+    print("Usage: send_report.xonsh result config_filename")
+    sys.exit(1)
+result = sys.argv[1]
+yamltext = open(sys.argv[2]).read()
+
+$topost=json.dumps({
+    'reponame':$GITHUB_REPOSITORY,
+    'datetime':datetime.now().isoformat(),
+    'result':result,
+    'config':yamltext,
+})
+
+printf "%s" $topost | ./signed_post.py http://localhost:8080/submit_job_log foo
