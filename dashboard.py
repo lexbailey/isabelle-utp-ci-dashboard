@@ -39,16 +39,17 @@ def build_details(yaml_text):
     yobj = yaml.safe_load(yaml_text)
     version = 'unknown_version'
     isa_ver = 'unknown_version'
-    for name, job in yobj.get('jobs', {}).items():
-        for step in job.get('steps', []):
-            uses = step.get('uses', '')
-            if 'isabelle-theory-build-github-action' in uses:
-                try:
-                    version = uses.split('@')[-1]
-                except:
-                    version = 'unknown_version'
-                with_ = step.get('with', {})
-                isa_ver = with_.get('isabelle-version', 'unknown_version')
+    if isinstance(yobj, dict):
+        for name, job in yobj.get('jobs', {}).items():
+            for step in job.get('steps', []):
+                uses = step.get('uses', '')
+                if 'isabelle-theory-build-github-action' in uses:
+                    try:
+                        version = uses.split('@')[-1]
+                    except:
+                        version = 'unknown_version'
+                    with_ = step.get('with', {})
+                    isa_ver = with_.get('isabelle-version', 'unknown_version')
     return {
         'build_script_ver': version,
         'isabelle_ver': isa_ver,
