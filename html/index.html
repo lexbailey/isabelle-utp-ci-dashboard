@@ -27,7 +27,7 @@
                     <td>Build Status</td>
                     <td>Builder version</td>
                     <td>Isabelle version</td>
-                    <td>GH link</td>
+                    <td>GH links</td>
                 </tr>
             {% for i in data %}
                 <tr>
@@ -43,14 +43,16 @@
                         {% endif %}
                         <a href='{{ prefix }}{{ i['isabelle_version'] }}'>{{ i['isabelle_version'] }}</a>
                     </td>
-                    <td><a href='https://github.com/{{ i['reponame'] }}'>GH</a></td>
+                    <td>
+                        <a href='https://github.com/{{ i['reponame'] }}'>GH</a> | <a href='https://github.com/{{ i['reponame'] }}/actions'>Actions</a>
+                    </td>
                 </tr>
             {% endfor %}
             </table>
         </div>
         <div>
             <p><a href='/'>Show latest builds across all repos and all versions</a></p>
-            <p>Get all this data along with full github actions config file for each build from <a href='raw_recent_data'>/raw_recent_data</a></p>
+            <p>Get all this data along with full github actions config file for each build from <a href='/raw_recent_data'>/raw_recent_data</a></p>
         </div>
     </body>
 </html>

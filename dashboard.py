@@ -97,7 +97,7 @@ app.jinja_env.globals.update(result_text=result_text)
 def fetch_current_data():
     db = get_db()
     cur = db.cursor()
-    cur.execute('select * from builds where (reponame, isabelle_version, datetime) in (select reponame, isabelle_version, max(datetime) over (partition by reponame, isabelle_version) as datetime from builds) order by reponame;')
+    cur.execute('select * from builds where (reponame, isabelle_version, datetime) in (select reponame, isabelle_version, max(datetime) over (partition by reponame, isabelle_version) as datetime from builds) order by datetime desc;')
     cols = [n[0] for n in cur.description]
     rows = cur.fetchall()
     return [{name:key for name,key in zip(cols, row)} for row in rows]
@@ -105,7 +105,7 @@ def fetch_current_data():
 def fetch_current_data_for_version(v):
     db = get_db()
     cur = db.cursor()
-    cur.execute('select * from builds where (reponame, isabelle_version, datetime) in (select reponame, isabelle_version, max(datetime) over (partition by reponame, isabelle_version) as datetime from builds) and isabelle_version is ? order by reponame;', (v,))
+    cur.execute('select * from builds where (reponame, isabelle_version, datetime) in (select reponame, isabelle_version, max(datetime) over (partition by reponame, isabelle_version) as datetime from builds) and isabelle_version is ? order by datetime desc;', (v,))
     cols = [n[0] for n in cur.description]
     rows = cur.fetchall()
     return [{name:key for name,key in zip(cols, row)} for row in rows]
@@ -113,7 +113,7 @@ def fetch_current_data_for_version(v):
 def fetch_builds_for_repo(r):
     db = get_db()
     cur = db.cursor()
-    cur.execute('select * from builds where reponame is ?;', (r,))
+    cur.execute('select * from builds where reponame is ? order by datetime desc;', (r,))
     cols = [n[0] for n in cur.description]
     rows = cur.fetchall()
     return [{name:key for name,key in zip(cols, row)} for row in rows]
@@ -121,7 +121,7 @@ def fetch_builds_for_repo(r):
 def fetch_builds_for_user(u):
     db = get_db()
     cur = db.cursor()
-    cur.execute('select * from builds where (reponame, isabelle_version, datetime) in (select reponame, isabelle_version, max(datetime) over (partition by reponame, isabelle_version) as datetime from builds) and reponame like ? order by reponame;', (f'{u}%',))
+    cur.execute('select * from builds where (reponame, isabelle_version, datetime) in (select reponame, isabelle_version, max(datetime) over (partition by reponame, isabelle_version) as datetime from builds) and reponame like ? order by datetime desc;', (f'{u}%',))
     cols = [n[0] for n in cur.description]
     rows = cur.fetchall()
     return [{name:key for name,key in zip(cols, row)} for row in rows]
@@ -129,7 +129,7 @@ def fetch_builds_for_user(u):
 def fetch_builds_for_user_and_version(u, v):
     db = get_db()
     cur = db.cursor()
-    cur.execute('select * from builds where (reponame, isabelle_version, datetime) in (select reponame, isabelle_version, max(datetime) over (partition by reponame, isabelle_version) as datetime from builds) and reponame like ? and isabelle_version is ? order by reponame;', (f'{u}%',v))
+    cur.execute('select * from builds where (reponame, isabelle_version, datetime) in (select reponame, isabelle_version, max(datetime) over (partition by reponame, isabelle_version) as datetime from builds) and reponame like ? and isabelle_version is ? order by datetime desc;', (f'{u}%',v))
     cols = [n[0] for n in cur.description]
     rows = cur.fetchall()
     return [{name:key for name,key in zip(cols, row)} for row in rows]
