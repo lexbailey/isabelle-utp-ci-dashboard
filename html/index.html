@@ -2,6 +2,7 @@
 <html>
     <head>
         <style>
+            a{color:black;}
             table{border-spacing:0;}
             td{padding-right:0.6em;padding-left:0.6em;}
             td{border-left:1px solid black;}
@@ -16,26 +17,40 @@
     </head>
     <body>
         <h1>Isabelle/UTP CI build dashboard</h1>
+        <h2>{{ name }}</h2>
         <div>
             <table>
                 <tr>
+                    <td>User</td>
                     <td>Repo</td>
                     <td>Last Build Time</td>
                     <td>Build Status</td>
                     <td>Builder version</td>
                     <td>Isabelle version</td>
+                    <td>GH link</td>
                 </tr>
             {% for i in data %}
                 <tr>
-                    <td>{{ i['reponame'] }}</td>
+                    <td><a href='/user/{{ i['username'] }}'>{{ i['username'] }}</a></td>
+                    <td><a href='/repo/{{ i['reponame'] }}'>{{ i['reponame'] }}</a></td>
                     <td>{{ i['datetime'] }}</td>
                     <td data-result='{{ i['result'] }}'>{{ result_text(i['result']) }}</td>
                     <td>{{ i['builder_version'] }}</td>
-                    <td>{{ i['isabelle_version'] }}</td>
+                    <td>
+                        {% set prefix = '/by_version/' %}
+                        {% if version_prefix %}
+                            {% set prefix = version_prefix %}
+                        {% endif %}
+                        <a href='{{ prefix }}{{ i['isabelle_version'] }}'>{{ i['isabelle_version'] }}</a>
+                    </td>
+                    <td><a href='https://github.com/{{ i['reponame'] }}'>GH</a></td>
                 </tr>
             {% endfor %}
             </table>
         </div>
-        <div><p>Get all this data along with full github actions config file for each build from <a href='raw_recent_data'>/raw_recent_data</a></p></div>
+        <div>
+            <p><a href='/'>Show latest builds across all repos and all versions</a></p>
+            <p>Get all this data along with full github actions config file for each build from <a href='raw_recent_data'>/raw_recent_data</a></p>
+        </div>
     </body>
 </html>

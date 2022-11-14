@@ -97,15 +97,81 @@ app.jinja_env.globals.update(result_text=result_text)
 def fetch_current_data():
     db = get_db()
     cur = db.cursor()
-    cur.execute('select * from builds where (reponame, datetime) in (select reponame, max(datetime) over (partition by reponame) as datetime from builds) order by reponame;')
+    cur.execute('select * from builds where (reponame, isabelle_version, datetime) in (select reponame, isabelle_version, max(datetime) over (partition by reponame, isabelle_version) as datetime from builds) order by reponame;')
     cols = [n[0] for n in cur.description]
     rows = cur.fetchall()
     return [{name:key for name,key in zip(cols, row)} for row in rows]
 
+def fetch_current_data_for_version(v):
+    db = get_db()
+    cur = db.cursor()
+    cur.execute('select * from builds where (reponame, isabelle_version, datetime) in (select reponame, isabelle_version, max(datetime) over (partition by reponame, isabelle_version) as datetime from builds) and isabelle_version is ? order by reponame;', (v,))
+    cols = [n[0] for n in cur.description]
+    rows = cur.fetchall()
+    return [{name:key for name,key in zip(cols, row)} for row in rows]
+
+def fetch_builds_for_repo(r):
+    db = get_db()
+    cur = db.cursor()
+    cur.execute('select * from builds where reponame is ?;', (r,))
+    cols = [n[0] for n in cur.description]
+    rows = cur.fetchall()
+    return [{name:key for name,key in zip(cols, row)} for row in rows]
+
+def fetch_builds_for_user(u):
+    db = get_db()
+    cur = db.cursor()
+    cur.execute('select * from builds where (reponame, isabelle_version, datetime) in (select reponame, isabelle_version, max(datetime) over (partition by reponame, isabelle_version) as datetime from builds) and reponame like ? order by reponame;', (f'{u}%',))
+    cols = [n[0] for n in cur.description]
+    rows = cur.fetchall()
+    return [{name:key for name,key in zip(cols, row)} for row in rows]
+
+def fetch_builds_for_user_and_version(u, v):
+    db = get_db()
+    cur = db.cursor()
+    cur.execute('select * from builds where (reponame, isabelle_version, datetime) in (select reponame, isabelle_version, max(datetime) over (partition by reponame, isabelle_version) as datetime from builds) and reponame like ? and isabelle_version is ? order by reponame;', (f'{u}%',v))
+    cols = [n[0] for n in cur.description]
+    rows = cur.fetchall()
+    return [{name:key for name,key in zip(cols, row)} for row in rows]
+
+def augment(data):
+    for x in data:
+        x['username'] = x.get('reponame','').split('/')[0]
+    return data
+
 @app.route('/')
 def root():
-    data = fetch_current_data()
-    return flask.render_template('index.html', data=data)
+    name = "Latest builds"
+    data = augment(fetch_current_data())
+    return flask.render_template('index.html', name=name, data=data)
+
+@app.route('/by_version/<version>')
+def by_version(version):
+    name = f"Latest builds (filtered by isabelle version: {version})"
+    data = augment(fetch_current_data_for_version(version))
+    return flask.render_template('index.html', name=name, data=data)
+
+@app.route('/repo/<repo>')
+@app.route('/repo/<owner>/<repo>')
+def by_repo(owner='', repo=''):
+    if owner != '':
+        repo = f'{owner}/{repo}'
+    name = f"Build log for repo: {repo}"
+    data = augment(fetch_builds_for_repo(repo))
+    return flask.render_template('index.html', name=name, data=data)
+
+@app.route('/user/<owner>')
+def by_user(owner):
+    name = f"Latest builds for repos by user: {owner}"
+    data = augment(fetch_builds_for_user(owner))
+    version_prefix = f'/by_user_and_version/{owner}/'
+    return flask.render_template('index.html', name=name, data=data, version_prefix=version_prefix)
+
+@app.route('/by_user_and_version/<owner>/<version>')
+def by_user_and_version(owner, version):
+    name = f"Latest builds for repos by user: {owner} for isabelle version: {version}"
+    data = augment(fetch_builds_for_user_and_version(owner, version))
+    return flask.render_template('index.html', name=name, data=data)
 
 @app.route('/raw_recent_data')
 def recent_raw():
