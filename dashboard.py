@@ -62,7 +62,7 @@ def insert_data(json):
     cur = db.cursor()
     extra = build_details(json.get('config', {}))
     json.update(extra)
-    data = tuple(json[k] for k in ['reponame', 'datetime', 'result', 'config', 'build_script_ver', 'isabelle_ver'])
+    data = tuple(json.get(k,'?') for k in ['reponame', 'datetime', 'result', 'config', 'build_script_ver', 'isabelle_ver'])
     cur.execute('insert into builds (reponame, datetime, result, config, builder_version, isabelle_version) values (?,?,?,?,?,?)', data)
     cur.close()
     db.commit()
@@ -81,7 +81,7 @@ def handle_log_submission(data):
     try:
         insert_data(j)
     except Exception as e:
-        raise DataError("Unknown failuer: " + e)
+        raise DataError("Unknown failure: " + str(e))
     
 def result_text(result_id):
     return {
